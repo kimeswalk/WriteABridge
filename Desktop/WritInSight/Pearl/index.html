@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pearl</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: #f4f1ec;
+      color: #2c2c2c;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 44px 24px 64px;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-size: 3rem;
+      font-weight: normal;
+      letter-spacing: 0.22em;
+      color: #3d3568;
+      margin-bottom: 14px;
+    }
+
+    header p {
+      font-size: 0.98rem;
+      color: #777;
+      max-width: 580px;
+      margin: 0 auto;
+      line-height: 1.75;
+    }
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    main {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 36px;
+      align-items: start;
+    }
+
+    @media (max-width: 740px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Cards ──────────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    }
+
+    /* ── Input panel ────────────────────────────────────────────── */
+    .input-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .prompt-label {
+      display: block;
+      font-size: 0.92rem;
+      color: #7060a8;
+      line-height: 1.65;
+      margin-bottom: 16px;
+      font-style: italic;
+      min-height: 3em;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      color: #2c2c2c;
+      background: #fafafa;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]::placeholder { color: #bbb; }
+    input[type="text"]:focus { border-color: #8070b8; background: #fff; }
+
+    .add-btn {
+      padding: 10px 18px;
+      background: #6055a0;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: background 0.18s;
+      white-space: nowrap;
+    }
+    .add-btn:hover  { background: #7060b0; }
+    .add-btn:active { background: #504590; }
+
+    /* ── Layers list ────────────────────────────────────────────── */
+    .layers-heading {
+      font-size: 0.76rem;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-bottom: 14px;
+    }
+
+    #layers-list {
+      padding-left: 20px;
+    }
+
+    #layers-list li {
+      font-size: 0.91rem;
+      color: #555;
+      margin-bottom: 5px;
+      line-height: 1.45;
+    }
+
+    .layers-empty {
+      list-style: none !important;
+      padding-left: 0 !important;
+      color: #ccc;
+      font-style: italic;
+      font-size: 0.88rem;
+    }
+
+    /* ── Pearl panel ────────────────────────────────────────────── */
+    .pearl-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .canvas-wrap {
+      width: 100%;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .empty-placeholder {
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      border: 2px dashed #ccc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #bbb;
+      font-style: italic;
+      font-size: 0.88rem;
+      text-align: center;
+      padding: 30px;
+      flex-shrink: 0;
+    }
+
+    #pearl-canvas {
+      display: none;
+      max-width: 100%;
+    }
+
+    .save-btn {
+      padding: 9px 28px;
+      background: transparent;
+      color: #6055a0;
+      border: 1.5px solid #6055a0;
+      border-radius: 20px;
+      font-family: inherit;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: background 0.18s, color 0.18s;
+    }
+    .save-btn:hover:not(:disabled) { background: #6055a0; color: #fff; }
+    .save-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <h1>Pearl</h1>
+    <p>Track the progression of your ideas throughout your brainstorming process by entering words or phrases into the timeline. If you backtracked to write more about a previous idea, go ahead and re-enter it.</p>
+  </header>
+
+  <main>
+
+    <!-- Left: input + layer list -->
+    <div class="input-panel">
+
+      <div class="card">
+        <span class="prompt-label" id="prompt-label">
+          The image, syntactic fragment, memory, or idea I started with
+        </span>
+        <div class="input-row">
+          <input type="text" id="idea-input" placeholder="Enter a word or phrase…" autocomplete="off" />
+          <button class="add-btn" id="add-btn">Add</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="layers-heading">Your layers</div>
+        <ol id="layers-list">
+          <li class="layers-empty">Your pearl begins with your first entry.</li>
+        </ol>
+      </div>
+
+    </div>
+
+    <!-- Right: pearl visualization -->
+    <div class="pearl-panel">
+      <div class="canvas-wrap" id="canvas-wrap">
+        <div class="empty-placeholder" id="empty-placeholder">
+          Enter your first idea to begin your pearl
+        </div>
+        <canvas id="pearl-canvas"></canvas>
+      </div>
+      <button class="save-btn" id="save-btn" disabled>Save Pearl as Image</button>
+    </div>
+
+  </main>
+</div>
+
+<script>
+'use strict';
+
+// ── State & constants ─────────────────────────────────────────────────────────
+const ideas  = [];
+const SEED_R = 62;    // seed circle radius in px
+const RING_W = 52;    // width of every ring in px
+const PAD    = 30;    // canvas padding in px
+const BG     = '#12102a';
+
+// Each color: highlight, two fill stops, edge, ink (text)
+const COLORS = [
+  { hi:'#fff', a:'#f0eaff', b:'#dcd0f8', edge:'#bcaee8', ink:'#2e1f60' },
+  { hi:'#fff', a:'#fff0f5', b:'#f8d8e8', edge:'#ddb0c8', ink:'#5a1840' },
+  { hi:'#fff', a:'#eef6ff', b:'#cfe5ff', edge:'#a5cbf0', ink:'#183058' },
+  { hi:'#fff', a:'#fffaee', b:'#ffe8b8', edge:'#e8cc7e', ink:'#503010' },
+  { hi:'#fff', a:'#eefff8', b:'#c8f0e0', edge:'#8ed8b5', ink:'#0f4030' },
+  { hi:'#fff', a:'#fff5f0', b:'#ffd8cc', edge:'#f0a885', ink:'#502010' },
+  { hi:'#fff', a:'#f0f0ff', b:'#d0d0f8', edge:'#a5a5e8', ink:'#201060' },
+  { hi:'#fff', a:'#ffffee', b:'#ffe8a5', edge:'#e5d06c', ink:'#504010' },
+];
+
+// ── Gradient helpers ──────────────────────────────────────────────────────────
+function pearlGrad(ctx, cx, cy, r, c) {
+  const gx = cx - r * 0.28, gy = cy - r * 0.32;
+  const g  = ctx.createRadialGradient(gx, gy, r * 0.04, cx, cy, r);
+  g.addColorStop(0,    c.hi);
+  g.addColorStop(0.18, c.a);
+  g.addColorStop(0.62, c.b);
+  g.addColorStop(1,    c.edge);
+  return g;
+}
+
+// ── Text drawing ──────────────────────────────────────────────────────────────
+
+/** Draw text centered in the seed circle, wrapping if needed. */
+function centerText(ctx, text, cx, cy, r, c, fs) {
+  if (!text) return;
+  ctx.save();
+  ctx.font         = `${fs}px Georgia, serif`;
+  ctx.fillStyle    = c.ink;
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+
+  const maxW  = r * 1.72;
+  const words = text.split(' ');
+  const lines = [];
+  let   line  = '';
+
+  for (const w of words) {
+    const test = line ? `${line} ${w}` : w;
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+    else line = test;
+  }
+  if (line) lines.push(line);
+
+  const lh    = fs * 1.35;
+  const startY = cy - ((lines.length - 1) * lh) / 2;
+  lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lh));
+  ctx.restore();
+}
+
+/** Draw text along the arc of a ring, centered at the top (12 o'clock). */
+function arcText(ctx, text, cx, cy, r, c, fs) {
+  if (!text) return;
+  ctx.save();
+  ctx.font         = `${fs}px Georgia, serif`;
+  ctx.fillStyle    = c.ink;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign    = 'center';
+
+  // Shrink font if text would span more than ~300°
+  let span = ctx.measureText(text).width / r;
+  const MAX_SPAN = (Math.PI * 5) / 3;
+  if (span > MAX_SPAN) {
+    fs = Math.max(8, Math.floor(fs * MAX_SPAN / span));
+    ctx.font = `${fs}px Georgia, serif`;
+    span = ctx.measureText(text).width / r;
+  }
+
+  // Center the text string at the top of the arc
+  let a = -Math.PI / 2 - span / 2;
+
+  for (const ch of text) {
+    const cw = ctx.measureText(ch).width;
+    const ca = cw / r;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(a + ca / 2);
+    ctx.translate(0, -r);
+    ctx.fillText(ch, 0, 0);
+    ctx.restore();
+    a += ca;
+  }
+  ctx.restore();
+}
+
+// ── Main draw function ────────────────────────────────────────────────────────
+function draw() {
+  const placeholder = document.getElementById('empty-placeholder');
+  const canvas      = document.getElementById('pearl-canvas');
+  const ctx         = canvas.getContext('2d');
+
+  if (ideas.length === 0) {
+    placeholder.style.display = 'flex';
+    canvas.style.display      = 'none';
+    return;
+  }
+
+  placeholder.style.display = 'none';
+  canvas.style.display      = 'block';
+
+  const n      = ideas.length;
+  const outerR = SEED_R + (n - 1) * RING_W;
+  const size   = outerR * 2 + PAD * 2;
+
+  canvas.width  = size;
+  canvas.height = size;
+
+  const cx = size / 2, cy = size / 2;
+  const fs = Math.max(10, Math.min(14, RING_W * 0.245));
+
+  // ① Dark background
+  ctx.fillStyle = BG;
+  ctx.fillRect(0, 0, size, size);
+
+  // ② Soft ambient glow behind the pearl
+  const bgGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, outerR * 1.45);
+  bgGlow.addColorStop(0,   'rgba(110, 95, 200, 0.14)');
+  bgGlow.addColorStop(0.7, 'rgba(110, 95, 200, 0.05)');
+  bgGlow.addColorStop(1,   'rgba(110, 95, 200, 0)');
+  ctx.fillStyle = bgGlow;
+  ctx.fillRect(0, 0, size, size);
+
+  // ③ Ring fills, outer → inner
+  for (let i = n - 1; i >= 0; i--) {
+    const r = i === 0 ? SEED_R : SEED_R + i * RING_W;
+    const c = COLORS[i % COLORS.length];
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle   = pearlGrad(ctx, cx, cy, r, c);
+    ctx.fill();
+    ctx.strokeStyle = c.edge;
+    ctx.lineWidth   = 0.9;
+    ctx.stroke();
+  }
+
+  // ④ Pearl luster highlight (sits above fills, below text)
+  const lx = cx - outerR * 0.27, ly = cy - outerR * 0.31;
+  const lr = outerR * 0.15;
+  const luster = ctx.createRadialGradient(lx, ly, 0, lx, ly, lr);
+  luster.addColorStop(0,   'rgba(255,255,255,0.52)');
+  luster.addColorStop(0.55,'rgba(255,255,255,0.14)');
+  luster.addColorStop(1,   'rgba(255,255,255,0)');
+  ctx.beginPath();
+  ctx.arc(lx, ly, lr, 0, Math.PI * 2);
+  ctx.fillStyle = luster;
+  ctx.fill();
+
+  // ⑤ Text, outer → inner (so inner labels paint over outer)
+  for (let i = n - 1; i >= 0; i--) {
+    const c = COLORS[i % COLORS.length];
+    if (i === 0) {
+      centerText(ctx, ideas[0], cx, cy, SEED_R, c, fs);
+    } else {
+      const midR = SEED_R + (i - 0.5) * RING_W;
+      arcText(ctx, ideas[i], cx, cy, midR, c, fs);
+    }
+  }
+}
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function updatePrompt() {
+  document.getElementById('prompt-label').textContent = ideas.length === 0
+    ? 'The image, syntactic fragment, memory, or idea I started with'
+    : 'Which led to the following image, syntactic fragment, memory, or idea';
+}
+
+function updateList() {
+  const ol = document.getElementById('layers-list');
+  if (ideas.length === 0) {
+    ol.innerHTML = '<li class="layers-empty">Your pearl begins with your first entry.</li>';
+  } else {
+    ol.innerHTML = ideas.map(t => `<li>${escHtml(t)}</li>`).join('');
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Core action ───────────────────────────────────────────────────────────────
+function addIdea() {
+  const input = document.getElementById('idea-input');
+  const text  = input.value.trim();
+  if (!text) return;
+
+  ideas.push(text);
+  input.value = '';
+  input.focus();
+
+  updatePrompt();
+  updateList();
+  draw();
+
+  document.getElementById('save-btn').disabled = false;
+}
+
+function savePearl() {
+  const canvas = document.getElementById('pearl-canvas');
+  if (!canvas || canvas.style.display === 'none') return;
+  const a    = document.createElement('a');
+  a.download = 'my-pearl.png';
+  a.href     = canvas.toDataURL('image/png');
+  a.click();
+}
+
+// ── Event listeners ───────────────────────────────────────────────────────────
+document.getElementById('add-btn').addEventListener('click', addIdea);
+document.getElementById('save-btn').addEventListener('click', savePearl);
+document.getElementById('idea-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addIdea();
+});
+</script>
+</body>
+</html>
