@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WriteABridge — WriteInSight</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #f4f1ec;
+      --panel:    #fdfcf9;
+      --border:   #dedad3;
+      --text:     #2c2a27;
+      --muted:    #888580;
+      --accent:   #5b6fa6;
+      --gold:     #b8924a;
+      --green:    #4a8c5c;
+      --tower:    #5a5451;
+      --cable:    #c8a96e;
+      --deck:     #8b7355;
+      --water:    #4a7fa5;
+    }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      background: #2c2a27;
+      color: #f4f1ec;
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .header-title h1 {
+      font-size: 1.25rem;
+      font-weight: normal;
+      letter-spacing: 0.12em;
+    }
+
+    .header-title span {
+      font-size: 0.7rem;
+      opacity: 0.55;
+      letter-spacing: 0.08em;
+      display: block;
+      margin-top: 2px;
+      font-style: italic;
+    }
+
+    .api-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .api-row label {
+      font-size: 0.72rem;
+      opacity: 0.6;
+      letter-spacing: 0.05em;
+    }
+
+    .api-row input {
+      font-family: 'Courier New', monospace;
+      font-size: 0.72rem;
+      padding: 5px 10px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: #f4f1ec;
+      border-radius: 4px;
+      width: 220px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .api-row input:focus { border-color: rgba(255,255,255,0.4); }
+    .api-row input::placeholder { opacity: 0.35; }
+
+    /* ── Main layout ─────────────────────────────────────────────── */
+    .main {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* ── Writing panel ───────────────────────────────────────────── */
+    .writing-panel {
+      width: 52%;
+      padding: 24px;
+      overflow-y: auto;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .field-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .field-card h2 {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--accent);
+      font-weight: normal;
+      margin-bottom: 8px;
+    }
+
+    .field-card textarea {
+      width: 100%;
+      font-family: Georgia, serif;
+      font-size: 0.9rem;
+      line-height: 1.65;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      resize: vertical;
+      outline: none;
+      min-height: 72px;
+    }
+
+    .field-card textarea::placeholder {
+      color: #c0bdb8;
+      font-style: italic;
+    }
+
+    .field-card.paragraph-card { flex: 1; }
+    .field-card.paragraph-card textarea { min-height: 160px; }
+
+    .bottom-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .status {
+      font-size: 0.78rem;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .analyze-btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 9px 22px;
+      border-radius: 5px;
+      font-family: Georgia, serif;
+      font-size: 0.88rem;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .analyze-btn:hover { background: #4a5e92; }
+    .analyze-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Bridge panel ────────────────────────────────────────────── */
+    .bridge-panel {
+      width: 48%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 16px 16px;
+      background: linear-gradient(180deg, #c8dff0 0%, #e0edf5 55%, #ede8e0 100%);
+      overflow: hidden;
+    }
+
+    .reckoning-label {
+      font-style: italic;
+      font-size: 1rem;
+      color: #3a3733;
+      opacity: 0.75;
+      text-align: center;
+      transition: all 0.7s ease;
+      min-height: 1.4em;
+      letter-spacing: 0.02em;
+    }
+
+    .bridge-wrap {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    #bridge-svg {
+      width: 100%;
+      height: 100%;
+      max-height: 320px;
+    }
+
+    /* SVG transition helpers */
+    .bridge-layer {
+      transition: opacity 0.9s ease;
+    }
+
+    .bridge-footer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
+
+    .dots {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #b8b4ae;
+      transition: background 0.5s ease, transform 0.3s ease;
+    }
+
+    .dot.active  { background: var(--accent); transform: scale(1.2); }
+    .dot.done    { background: var(--green); }
+
+    .structure-btn {
+      display: none;
+      border: 1px solid var(--green);
+      background: transparent;
+      color: var(--green);
+      padding: 7px 20px;
+      border-radius: 20px;
+      font-family: Georgia, serif;
+      font-size: 0.82rem;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.25s, color 0.25s;
+    }
+
+    .structure-btn:hover { background: var(--green); color: white; }
+    .structure-btn.show  { display: block; }
+
+    .structure-card {
+      display: none;
+      background: rgba(255,255,255,0.88);
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 0.8rem;
+      text-align: center;
+      line-height: 1.55;
+      max-width: 300px;
+      backdrop-filter: blur(4px);
+    }
+
+    .structure-card.show { display: block; }
+
+    .structure-type-label {
+      font-size: 1rem;
+      font-weight: bold;
+      text-transform: capitalize;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .structure-desc { color: #555; margin-top: 5px; }
+    .structure-claim { font-style: italic; color: #3a3733; margin-top: 7px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <h1>WriteABridge</h1>
+    <span>Build conceptual connections between artifacts</span>
+  </div>
+  <div class="api-row">
+    <label for="api-key">Fireworks API Key</label>
+    <input id="api-key" type="password" placeholder="fw_…" autocomplete="off" />
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ── Writing panel ──────────────────────────────────────────── -->
+  <div class="writing-panel">
+
+    <div class="field-card">
+      <h2>Artifact A — Quote or Written Description</h2>
+      <textarea id="artifact-a" rows="3"
+        placeholder="Paste a quotation or describe your first artifact here…"></textarea>
+    </div>
+
+    <div class="field-card">
+      <h2>Artifact B — Quote or Written Description</h2>
+      <textarea id="artifact-b" rows="3"
+        placeholder="Paste a quotation or describe your second artifact here…"></textarea>
+    </div>
+
+    <div class="field-card paragraph-card">
+      <h2>Your Bridge Paragraph</h2>
+      <textarea id="bridge-para"
+        placeholder="Write your paragraph here. Explain how your first artifact connects logically to your second. As your writing builds a bridge, the illustration to the right will rebuild itself."></textarea>
+    </div>
+
+    <div class="bottom-row">
+      <span class="status" id="status"></span>
+      <button class="analyze-btn" id="analyze-btn" onclick="analyze(false)">Analyze</button>
+    </div>
+    <div id="feedback-box" style="display:none; background:#f0ede6; border-left:3px solid var(--accent); border-radius:0 6px 6px 0; padding:12px 16px; font-size:0.88rem; line-height:1.65; color:#3a3733; font-style:italic;"></div>
+
+  </div>
+
+  <!-- ── Bridge panel ───────────────────────────────────────────── -->
+  <div class="bridge-panel">
+
+    <div class="reckoning-label" id="reck-label">Begin writing to build your bridge…</div>
+
+    <div class="bridge-wrap">
+      <svg id="bridge-svg" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#b0d0e8"/>
+            <stop offset="100%" stop-color="#dceaf3"/>
+          </linearGradient>
+          <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#4a7fa5" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#2c5870" stop-opacity="0.95"/>
+          </linearGradient>
+          <linearGradient id="bank" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="#8b8077"/>
+            <stop offset="100%" stop-color="#6b6057"/>
+          </linearGradient>
+          <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Sky background -->
+        <rect width="800" height="400" fill="url(#sky)"/>
+
+        <!-- Water / void (center) -->
+        <rect x="188" y="348" width="472" height="52" fill="url(#water)"/>
+        <!-- Water shimmer -->
+        <line x1="220" y1="360" x2="330" y2="360" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+        <line x1="370" y1="373" x2="500" y2="373" stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+        <line x1="520" y1="364" x2="620" y2="364" stroke="rgba(255,255,255,0.22)" stroke-width="1.5"/>
+
+        <!-- Ground banks -->
+        <rect x="0"   y="340" width="200" height="60" fill="url(#bank)"/>
+        <rect x="660" y="340" width="140" height="60" fill="url(#bank)"/>
+
+        <!-- Approach roads (always present) -->
+        <rect x="0"   y="332" width="188" height="12" fill="#8b7355"/>
+        <rect x="660" y="332" width="140" height="12" fill="#8b7355"/>
+
+        <!-- ── LEFT TOWER ────────────────────────────────────── -->
+        <g id="g-towers">
+          <!-- Left tower -->
+          <rect x="110" y="58" width="30" height="285" fill="#5a5451" rx="3"/>
+          <rect x="158" y="58" width="30" height="285" fill="#5a5451" rx="3"/>
+          <rect x="104" y="55" width="90" height="16"  fill="#474340" rx="2"/> <!-- cap -->
+          <rect x="104" y="130" width="90" height="13" fill="#474340" rx="2"/> <!-- bar 1 -->
+          <rect x="104" y="205" width="90" height="13" fill="#474340" rx="2"/> <!-- bar 2 -->
+          <rect x="104" y="278" width="90" height="13" fill="#474340" rx="2"/> <!-- bar 3 -->
+          <rect x="99"  y="50"  width="32" height="9"  fill="#3a3836" rx="2"/> <!-- left cap -->
+          <rect x="155" y="50"  width="32" height="9"  fill="#3a3836" rx="2"/> <!-- right cap -->
+
+          <!-- Right tower -->
+          <rect x="660" y="58" width="30" height="285" fill="#5a5451" rx="3"/>
+          <rect x="708" y="58" width="30" height="285" fill="#5a5451" rx="3"/>
+          <rect x="654" y="55" width="90" height="16"  fill="#474340" rx="2"/>
+          <rect x="654" y="130" width="90" height="13" fill="#474340" rx="2"/>
+          <rect x="654" y="205" width="90" height="13" fill="#474340" rx="2"/>
+          <rect x="654" y="278" width="90" height="13" fill="#474340" rx="2"/>
+          <rect x="649" y="50" width="32" height="9"   fill="#3a3836" rx="2"/>
+          <rect x="705" y="50" width="32" height="9"   fill="#3a3836" rx="2"/>
+        </g>
+
+        <!-- ── STATE 0: Debris (blown-out center) ─────────────── -->
+        <g id="g-debris" class="bridge-layer" opacity="1">
+          <!-- Dangling left cable end -->
+          <path d="M 188,65 Q 240,200 220,330"
+                stroke="#c8a96e" stroke-width="3.5" fill="none"
+                stroke-dasharray="10 5" stroke-linecap="round" opacity="0.55"/>
+          <!-- Dangling right cable end -->
+          <path d="M 660,65 Q 610,200 625,330"
+                stroke="#c8a96e" stroke-width="3.5" fill="none"
+                stroke-dasharray="10 5" stroke-linecap="round" opacity="0.55"/>
+          <!-- Fallen planks in water -->
+          <rect x="230" y="353" width="65" height="7" rx="2" fill="#8b7355" opacity="0.55"
+                transform="rotate(-12, 263, 356)"/>
+          <rect x="330" y="362" width="55" height="6" rx="2" fill="#7a6348" opacity="0.45"
+                transform="rotate(7, 357, 365)"/>
+          <rect x="410" y="350" width="70" height="7" rx="2" fill="#8b7355" opacity="0.5"
+                transform="rotate(-4, 445, 353)"/>
+          <rect x="500" y="358" width="48" height="6" rx="2" fill="#7a6348" opacity="0.5"
+                transform="rotate(11, 524, 361)"/>
+        </g>
+
+        <!-- ── STATE 1: Cables drooping, not meeting ──────────── -->
+        <g id="g-s1" class="bridge-layer" opacity="0">
+          <!-- Left cable droops from tower, ends floating center-left -->
+          <path d="M 188,65 Q 300,280 375,275"
+                stroke="#c8a96e" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <!-- Right cable droops from tower, ends floating center-right -->
+          <path d="M 660,65 Q 550,280 445,275"
+                stroke="#c8a96e" stroke-width="4" fill="none" stroke-linecap="round"/>
+        </g>
+
+        <!-- ── STATE 2: Full cable, suspenders, partial deck ─────── -->
+        <g id="g-s2" class="bridge-layer" opacity="0">
+          <!-- Main cable (catenary: anchors 188,65 → 660,65, ctrl 424,310) -->
+          <path d="M 188,65 Q 424,310 660,65"
+                stroke="#c8a96e" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <!-- Suspenders (9, evenly spaced across 188–660) -->
+          <line x1="235" y1="109" x2="235" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="282" y1="143" x2="282" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="329" y1="168" x2="329" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="376" y1="182" x2="376" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="424" y1="188" x2="424" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="471" y1="183" x2="471" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="518" y1="168" x2="518" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="565" y1="144" x2="565" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="612" y1="110" x2="612" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <!-- Partial deck — gap in center -->
+          <rect x="188" y="330" width="100" height="10" fill="#8b7355" rx="1.5"/>
+          <rect x="300" y="330" width="60"  height="10" fill="#8b7355" rx="1.5"/>
+          <!-- center gap 360–488 -->
+          <rect x="488" y="330" width="55"  height="10" fill="#8b7355" rx="1.5"/>
+          <rect x="555" y="330" width="105" height="10" fill="#8b7355" rx="1.5"/>
+        </g>
+
+        <!-- ── STATE 3: Complete bridge ───────────────────────── -->
+        <g id="g-s3" class="bridge-layer" opacity="0">
+          <!-- Main cable with glow -->
+          <path d="M 188,65 Q 424,310 660,65"
+                stroke="#d4bc6e" stroke-width="3" fill="none" opacity="0.5"
+                filter="url(#glow)"/>
+          <path d="M 188,65 Q 424,310 660,65"
+                stroke="#c8a96e" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <!-- Suspenders (11, evenly spaced across 188–660) -->
+          <line x1="227" y1="102" x2="227" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="266" y1="133" x2="266" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="305" y1="156" x2="305" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="344" y1="174" x2="344" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="384" y1="184" x2="384" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="424" y1="188" x2="424" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="463" y1="184" x2="463" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="502" y1="174" x2="502" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="541" y1="157" x2="541" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="581" y1="133" x2="581" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <line x1="620" y1="103" x2="620" y2="333" stroke="#c8a96e" stroke-width="1.8" opacity="0.85"/>
+          <!-- Full deck -->
+          <rect x="188" y="329" width="472" height="11" fill="#8b7355" rx="2"/>
+          <!-- Plank lines every 25px -->
+          <line x1="213" y1="329" x2="213" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="238" y1="329" x2="238" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="263" y1="329" x2="263" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="288" y1="329" x2="288" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="313" y1="329" x2="313" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="338" y1="329" x2="338" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="363" y1="329" x2="363" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="388" y1="329" x2="388" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="413" y1="329" x2="413" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="438" y1="329" x2="438" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="463" y1="329" x2="463" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="488" y1="329" x2="488" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="513" y1="329" x2="513" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="538" y1="329" x2="538" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="563" y1="329" x2="563" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="588" y1="329" x2="588" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="613" y1="329" x2="613" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <line x1="638" y1="329" x2="638" y2="340" stroke="#7a6348" stroke-width="1.2" opacity="0.5"/>
+          <!-- Traversal light -->
+          <circle id="traveler" cx="-30" cy="334" r="5" fill="#ffe566" opacity="0.95"/>
+        </g>
+
+        <!-- ── Railings (states 2 & 3) ────────────────────────── -->
+        <g id="g-rails" class="bridge-layer" opacity="0">
+          <line x1="188" y1="320" x2="660" y2="320" stroke="#5a5451" stroke-width="2"/>
+          <line x1="215" y1="320" x2="215" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="255" y1="320" x2="255" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="295" y1="320" x2="295" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="335" y1="320" x2="335" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="375" y1="320" x2="375" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="424" y1="320" x2="424" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="473" y1="320" x2="473" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="513" y1="320" x2="513" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="553" y1="320" x2="553" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="593" y1="320" x2="593" y2="333" stroke="#5a5451" stroke-width="2"/>
+          <line x1="633" y1="320" x2="633" y2="333" stroke="#5a5451" stroke-width="2"/>
+        </g>
+
+      </svg>
+    </div><!-- .bridge-wrap -->
+
+    <div class="bridge-footer">
+      <div class="dots">
+        <div class="dot" id="dot0"></div>
+        <div class="dot" id="dot1"></div>
+        <div class="dot" id="dot2"></div>
+        <div class="dot" id="dot3"></div>
+      </div>
+      <div class="structure-card" id="structure-card">
+        <div class="structure-type-label" id="s-type"></div>
+        <div class="structure-desc"  id="s-desc"></div>
+        <div class="structure-claim" id="s-claim"></div>
+      </div>
+      <button class="structure-btn" id="structure-btn" onclick="showStructure()">
+        Structure check
+      </button>
+    </div>
+
+  </div><!-- .bridge-panel -->
+
+</div><!-- .main -->
+
+<script>
+  // ── Config ──────────────────────────────────────────────────────
+  const FIREWORKS_URL = 'https://api.fireworks.ai/inference/v1/chat/completions';
+  const MODEL = 'accounts/fireworks/models/deepseek-v4-pro';
+
+  const LABELS = [
+    'Reckoning\u2026',
+    'Reckoning a little more\u2026',
+    'Reckoning and a little more\u2026',
+    'Reckoned.'
+  ];
+
+  const TYPE_DESCS = {
+    illustration: 'One artifact demonstrates or instantiates the claim of the other.',
+    complication: 'One artifact resists, qualifies, or troubles the claim of the other.',
+    extension:    'The paragraph extends one artifact\u2019s claim into new territory or implication.',
+    contrast:     'The juxtaposition reveals an insight neither source alone provides.',
+    unknown:      'The bridge structure is not yet clearly defined.'
+  };
+
+  // ── State ────────────────────────────────────────────────────────
+  let currentState = -1;
+  let lastResult   = null;
+  let debouncer    = null;
+  let travelerRAF  = null;
+
+  // ── Elements ─────────────────────────────────────────────────────
+  const $status    = document.getElementById('status');
+  const $btn       = document.getElementById('analyze-btn');
+  const $label     = document.getElementById('reck-label');
+  const $strBtn    = document.getElementById('structure-btn');
+  const $strCard   = document.getElementById('structure-card');
+  const layers     = {
+    debris: document.getElementById('g-debris'),
+    s1:     document.getElementById('g-s1'),
+    s2:     document.getElementById('g-s2'),
+    s3:     document.getElementById('g-s3'),
+    rails:  document.getElementById('g-rails')
+  };
+  const dots = [0,1,2,3].map(i => document.getElementById('dot' + i));
+
+  // ── Auto-analyze on paragraph input ─────────────────────────────
+  document.getElementById('bridge-para').addEventListener('input', () => {
+    clearTimeout(debouncer);
+    const txt = document.getElementById('bridge-para').value.trim();
+    if (txt.length > 40) {
+      setStatus('Analyzing\u2026');
+      debouncer = setTimeout(() => analyze(true), 2000);
+    }
+  });
+
+  // ── Main analysis function ────────────────────────────────────────
+  async function analyze(auto = false) {
+    const key   = document.getElementById('api-key').value.trim();
+    const artA  = document.getElementById('artifact-a').value.trim();
+    const artB  = document.getElementById('artifact-b').value.trim();
+    const para  = document.getElementById('bridge-para').value.trim();
+
+    if (!key)  { setStatus('Enter your Fireworks API key above.'); return; }
+    if (!para) { setStatus('Write your bridge paragraph first.'); return; }
+
+    $btn.disabled = true;
+    setStatus('Analyzing\u2026');
+
+    try {
+      const resp = await fetch(FIREWORKS_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${key}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a writing analysis assistant. You evaluate how well student paragraphs build conceptual bridges between artifacts. You must respond with a single valid JSON object and nothing else — no markdown, no code fences, no explanation.'
+            },
+            { role: 'user', content: buildPrompt(artA, artB, para) }
+          ],
+          max_tokens: 2000,
+          temperature: 0.1
+        })
+      });
+
+      if (!resp.ok) {
+        const body = await resp.text();
+        console.error('API error', resp.status, body);
+        throw new Error('connection');
+      }
+
+      const data = await resp.json();
+      const msg     = data.choices?.[0]?.message ?? {};
+      const content = (msg.content ?? msg.reasoning_content ?? '').trim();
+
+      const stripped = content.replace(/```(?:json)?/gi, '').trim();
+      const match    = stripped.match(/\{[\s\S]*\}/);
+      if (!match) {
+        console.error('No JSON found in model response:', content);
+        throw new Error('parse');
+      }
+
+      lastResult = JSON.parse(match[0]);
+      const state = Math.max(0, Math.min(3, Number(lastResult.state) || 0));
+      setBridgeState(state);
+      setStatus('');
+      setFeedback(lastResult.reasoning ?? '');
+
+    } catch (err) {
+      console.error(err);
+      if (err.message === 'connection') {
+        setStatus('Could not reach the analysis service. Check your API key and try again.');
+      } else if (err.message === 'parse') {
+        setStatus('The analysis returned an unexpected response. Please try again.');
+      } else {
+        setStatus('Something went wrong. Please try again.');
+      }
+    } finally {
+      $btn.disabled = false;
+    }
+  }
+
+  // ── Prompt ───────────────────────────────────────────────────────
+  function buildPrompt(artA, artB, para) {
+    return `Evaluate this student paragraph that attempts to build a conceptual bridge between two artifacts.
+
+ARTIFACT A:
+${artA || '(not provided — infer from paragraph if possible)'}
+
+ARTIFACT B:
+${artB || '(not provided — infer from paragraph if possible)'}
+
+STUDENT PARAGRAPH:
+${para}
+
+Assign a state (0–3) based on how strongly the paragraph connects the two artifacts:
+
+State 0 — "Reckoning": Both artifacts are mentioned but no meaningful connection is drawn. They sit side by side without explanation.
+
+State 1 — "Reckoning a little more": A surface connection is made (shared subject, keyword overlap, "shows" or "depicts") but WHY the connection matters is not explained. The relationship is asserted, not argued.
+
+State 2 — "Reckoning and a little more": A thematic or conceptual link is established with mechanism or cultural context (e.g., historical practice, artistic method) but no synthesis, consequence, or new insight is generated from the connection.
+
+State 3 — "Reckoned": Full synthesis achieved. The paragraph generates an insight or consequence that REQUIRES both artifacts. If you removed either artifact, the final claim would collapse or change meaning. The paragraph makes something new happen.
+
+Also identify bridge TYPE (if state 2 or 3):
+- "illustration": one artifact demonstrates or instantiates the other's claim
+- "complication": one artifact resists, qualifies, or troubles the other's claim
+- "extension": the paragraph extends one artifact's claim into new territory or implication
+- "contrast": juxtaposition of the two artifacts reveals an unstated third insight
+- "unknown": cannot determine
+
+Respond ONLY with this JSON object (no preamble, no markdown):
+{
+  "state": <integer 0–3>,
+  "bridge_type": "<illustration|complication|extension|contrast|unknown>",
+  "reasoning": "<one sentence explaining the state assignment>",
+  "synthesis_claim": "<the core synthesizing claim in the student's paragraph, or null>"
+}`;
+  }
+
+  // ── Bridge state machine ─────────────────────────────────────────
+  function setBridgeState(state) {
+    if (state === currentState) return;
+    currentState = state;
+
+    // Label
+    $label.textContent = LABELS[state];
+
+    // Layers: fade all, then reveal the right ones
+    Object.values(layers).forEach(el => el.style.opacity = '0');
+
+    setTimeout(() => {
+      if (state === 0) {
+        layers.debris.style.opacity = '1';
+      } else if (state === 1) {
+        layers.s1.style.opacity = '1';
+      } else if (state === 2) {
+        layers.s2.style.opacity = '1';
+        layers.rails.style.opacity = '1';
+      } else if (state === 3) {
+        layers.s3.style.opacity = '1';
+        layers.rails.style.opacity = '1';
+        startTraversal();
+        setTimeout(() => $strBtn.classList.add('show'), 1400);
+      }
+    }, 80);
+
+    // Dots
+    dots.forEach((d, i) => {
+      d.className = 'dot';
+      if (i <  state) d.classList.add('done');
+      if (i === state) d.classList.add('active');
+    });
+
+    // Hide structure card when state changes
+    $strCard.classList.remove('show');
+    if (state < 3) $strBtn.classList.remove('show');
+  }
+
+  // ── Traversal animation (state 3) ───────────────────────────────
+  function startTraversal() {
+    if (travelerRAF) cancelAnimationFrame(travelerRAF);
+    const light = document.getElementById('traveler');
+    let x = 185;
+    let paused = false;
+
+    function step() {
+      if (paused) return;
+      x += 1.4;
+      light.setAttribute('cx', x);
+      if (x > 660) {
+        paused = true;
+        setTimeout(() => { x = 185; paused = false; travelerRAF = requestAnimationFrame(step); }, 2200);
+        return;
+      }
+      travelerRAF = requestAnimationFrame(step);
+    }
+
+    setTimeout(() => { travelerRAF = requestAnimationFrame(step); }, 700);
+  }
+
+  // ── Structure reveal ─────────────────────────────────────────────
+  function showStructure() {
+    if (!lastResult) return;
+
+    const type  = lastResult.bridge_type || 'unknown';
+    const claim = lastResult.synthesis_claim;
+
+    document.getElementById('s-type').textContent  = type;
+    document.getElementById('s-desc').textContent  = TYPE_DESCS[type] || '';
+    document.getElementById('s-claim').textContent = claim ? `\u201C${claim}\u201D` : '';
+    document.getElementById('s-claim').style.display = claim ? '' : 'none';
+
+    $strCard.classList.add('show');
+  }
+
+  // ── Utility ──────────────────────────────────────────────────────
+  function setStatus(msg) {
+    $status.textContent = msg;
+  }
+
+  function setFeedback(msg) {
+    const box = document.getElementById('feedback-box');
+    if (msg) {
+      box.textContent = msg;
+      box.style.display = 'block';
+    } else {
+      box.style.display = 'none';
+    }
+  }
+</script>
+
+</body>
+</html>
