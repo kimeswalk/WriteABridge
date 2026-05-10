@@ -138,8 +138,18 @@
       font-style: italic;
     }
 
-    .field-card.paragraph-card { flex: 1; }
-    .field-card.paragraph-card textarea { min-height: 160px; }
+    .field-card.paragraph-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .field-card.paragraph-card textarea {
+      flex: 1;
+      min-height: 0;
+      resize: none;
+    }
 
     .bottom-row {
       display: flex;
@@ -571,8 +581,23 @@
   };
   const dots = [0,1,2,3].map(i => document.getElementById('dot' + i));
 
-  // ── Auto-analyze on paragraph input ─────────────────────────────
+  // ── Fit paragraph text by shrinking font when content overflows ──
+  function fitParagraphText() {
+    const ta = document.getElementById('bridge-para');
+    const MAX = 0.9;
+    const MIN = 0.5;
+    const STEP = 0.025;
+
+    ta.style.fontSize = MAX + 'rem';
+    let size = MAX;
+    while (ta.scrollHeight > ta.clientHeight && size > MIN) {
+      size = Math.max(MIN, +(size - STEP).toFixed(3));
+      ta.style.fontSize = size + 'rem';
+    }
+  }
+
   document.getElementById('bridge-para').addEventListener('input', () => {
+    fitParagraphText();
     clearTimeout(debouncer);
     const txt = document.getElementById('bridge-para').value.trim();
     if (txt.length > 40) {
